@@ -1,0 +1,15 @@
+# Development override — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# Enables hot-reload for the backend by mounting source code.
+# Frontend is served by Vite dev server directly (run separately: npm run dev)
+
+version: "3.9"
+
+services:
+  backend:
+    volumes:
+      - ./backend:/app
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    environment:
+      APP_ENV: development

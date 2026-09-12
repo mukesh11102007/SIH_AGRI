@@ -1,0 +1,145 @@
+version: "3.9"
+
+# ============================================================
+# Smart Farming Platform — Docker Compose
+# ============================================================
+# Services:
+#   mosquitto  — MQTT broker (IoT telemetry ingestion)
+#   postgres   — PostgreSQL 16 + TimescaleDB (primary database)
+#   backend    — FastAPI application server
+#   simulator  — Realistic sensor data simulator
+#   frontend   — React dashboard (served by Nginx)
+# ============================================================
+
+services:
+
+  # ── MQTT Broker ────────────────────────────────────────────
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: farm_mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"   # MQTT (plain — local network only)
+      - "9001:9001"   # WebSocket MQTT (optional browser clients)
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/config/passwd:/mosquitto/config/passwd:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_pub -h localhost -t health/check -m ping -u farmdevice -P changeme_mqtt_password && echo OK || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ── Database ────────────────────────────────────────────────
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: farm_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-smartfarm}
+      POSTGRES_USER: ${POSTGRES_USER:-farmuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_strong_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-farmuser} -d ${POSTGRES_DB:-smartfarm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ── Backend API ─────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: farm_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-smartfarm}
+      POSTGRES_USER: ${POSTGRES_USER:-farmuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_strong_password}
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 1883
+      MQTT_USERNAME: ${MQTT_USERNAME:-farmdevice}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-changeme_mqtt_password}
+      MQTT_CLIENT_ID: ${MQTT_CLIENT_ID:-backend-ingest-01}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      APP_ENV: ${APP_ENV:-development}
+      SECRET_KEY: ${SECRET_KEY:-changeme_at_least_32_char_secret_key_here}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://frontend}
+      SIMULATOR_FARM_ID: ${SIMULATOR_FARM_ID:-farm-001}
+      SIMULATOR_FIELD_ID: ${SIMULATOR_FIELD_ID:-field-north-01}
+      # ── Hardware (HC-05) — disabled by default ──────────────
+      # HARDWARE_ENABLED defaults to false — no hardware required to run.
+      HARDWARE_ENABLED: ${HARDWARE_ENABLED:-false}
+      HARDWARE_DEVICE_ID: ${HARDWARE_DEVICE_ID:-hc05-device-01}
+      HARDWARE_FARM_ID: ${HARDWARE_FARM_ID:-farm-001}
+      HARDWARE_FIELD_ID: ${HARDWARE_FIELD_ID:-field-north-01}
+      HARDWARE_SERIAL_PORT: ${HARDWARE_SERIAL_PORT:-}
+      HARDWARE_BAUD_RATE: ${HARDWARE_BAUD_RATE:-9600}
+      HARDWARE_READ_TIMEOUT_S: ${HARDWARE_READ_TIMEOUT_S:-2.0}
+    ports:
+      - "8000:8000"
+    # NOTE: No volume mount here — the Docker image is self-contained.
+    # For hot-reload development, use docker-compose.dev.yml override.
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')\" 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
+  # ── Sensor Simulator ────────────────────────────────────────
+  simulator:
+    build:
+      context: ./simulator
+      dockerfile: Dockerfile
+    container_name: farm_simulator
+    restart: unless-stopped
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 1883
+      MQTT_USERNAME: ${MQTT_USERNAME:-farmdevice}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-changeme_mqtt_password}
+      SIMULATOR_FARM_ID: ${SIMULATOR_FARM_ID:-farm-001}
+      SIMULATOR_FIELD_ID: ${SIMULATOR_FIELD_ID:-field-north-01}
+      SIMULATOR_DEVICE_ID: ${SIMULATOR_DEVICE_ID:-sim-esp32-01}
+      SIMULATOR_INTERVAL_SECONDS: ${SIMULATOR_INTERVAL_SECONDS:-10}
+      SIMULATOR_SCENARIO: ${SIMULATOR_SCENARIO:-NORMAL}
+      BACKEND_URL: http://backend:8000
+
+  # ── Frontend ────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: farm_frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:80"
+
+volumes:
+  postgres_data:
+  mosquitto_data:
+  mosquitto_log:
