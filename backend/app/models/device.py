@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Device ORM model — represents a physical or simulated field device (ESP32, etc.)."""
 import uuid
 from datetime import datetime

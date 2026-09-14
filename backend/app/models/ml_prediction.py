@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 MLPrediction ORM model — stores predictions from ML models.
 

@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 SensorReading ORM model — the TimescaleDB hypertable for all sensor telemetry.
 

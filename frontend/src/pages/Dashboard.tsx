@@ -217,6 +217,10 @@ export default function Dashboard() {
               <SensorValue label="Light Intensity" value={summary.light_lux} unit="lux" decimals={0} />
               <div className="divider" style={{ margin: 'var(--space-1) 0' }} />
               <SensorValue label="Leaf Wetness" value={summary.leaf_wetness_pct} unit="%" />
+              <div className="divider" style={{ margin: 'var(--space-1) 0' }} />
+              <SensorValue label="Pest / Vibration" value={summary.vibration_raw} unit="units" />
+              <div className="divider" style={{ margin: 'var(--space-1) 0' }} />
+              <SensorValue label="Soil Gas (VOC)" value={summary.soil_gas_raw} unit="ppm" />
             </div>
             {summary.last_updated && (
               <div style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)', marginTop: 'var(--space-4)' }}>

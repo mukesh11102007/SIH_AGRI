@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Farm ORM model."""
 import uuid
 from datetime import datetime

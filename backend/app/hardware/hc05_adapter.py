@@ -141,6 +141,7 @@ def _build_telemetry_payload(
     pest_vibe: int | None,
     soil_gas_raw: float | None,
     irradiance_w_m2: float | None,
+    leaf_wetness: float | None,
     pump_status: str | None,
     sequence: int,
 ) -> dict:
@@ -164,8 +165,8 @@ def _build_telemetry_payload(
         "soil_temperature_c": canopy_temp_c,    # Proxy canopy temp as soil temp
         "light_lux": (irradiance_w_m2 * 120) if (irradiance_w_m2 is not None and irradiance_w_m2 >= 0) else None,
 
-        # ── No HC-05 equivalent — left as None ───────────────
-        "leaf_wetness_pct": None,
+        # ── Hardware specific ───────────────
+        "leaf_wetness_pct": leaf_wetness,
         "water_level_available": None,
     }
 
@@ -193,10 +194,71 @@ def _build_telemetry_payload(
     }
 
 
+def _auto_detect_port() -> str | None:
+    """
+    Scan all available serial ports and return the best candidate for an
+    Arduino / USB-serial device.
+
+    Priority order:
+      1. The port configured in HARDWARE_SERIAL_PORT (if set and exists)
+      2. Any port whose name contains 'usbmodem' or 'usbserial' (Mac Arduino)
+      3. Any port whose name contains 'ttyUSB' or 'ttyACM' (Linux Arduino)
+      4. Any port whose name contains 'COM' (Windows Arduino)
+      5. First available port as a last resort
+    """
+    import serial.tools.list_ports
+
+    configured = settings.hardware_serial_port
+
+    # If a specific port is configured AND it actually exists, use it directly.
+    if configured:
+        import os
+        if os.path.exists(configured):
+            return configured
+        logger.warning(
+            "hardware_configured_port_missing",
+            port=configured,
+            note="Falling back to auto-detection.",
+        )
+
+    # Auto-detect: list all available ports
+    available = list(serial.tools.list_ports.comports())
+    if not available:
+        return None
+
+    port_names = [p.device for p in available]
+    logger.info("hardware_auto_detect_scanning", ports=port_names)
+
+    # Priority 1 — Mac Arduino (usbmodem / usbserial)
+    for p in available:
+        if "usbmodem" in p.device.lower() or "usbserial" in p.device.lower():
+            logger.info("hardware_auto_detect_found", port=p.device, reason="usbmodem/usbserial")
+            return p.device
+
+    # Priority 2 — Linux Arduino (ttyUSB / ttyACM)
+    for p in available:
+        if "ttyusb" in p.device.lower() or "ttyacm" in p.device.lower():
+            logger.info("hardware_auto_detect_found", port=p.device, reason="ttyUSB/ttyACM")
+            return p.device
+
+    # Priority 3 — Windows COM port
+    for p in available:
+        if "com" in p.device.lower():
+            logger.info("hardware_auto_detect_found", port=p.device, reason="COM port")
+            return p.device
+
+    # Last resort — first available port
+    logger.info("hardware_auto_detect_found", port=available[0].device, reason="first available")
+    return available[0].device
+
+
 async def _hardware_listener() -> None:
     """
     Long-running loop that reads from the hardware serial port (USB/wired)
     and feeds parsed readings into the existing ingestion pipeline.
+
+    If HARDWARE_SERIAL_PORT is not set or the configured port is not found,
+    auto-detects the first available USB/Arduino serial port.
 
     Supports two Arduino output formats:
       1. CSV key:value  — "Canopy Temp: 31.3 C,Humidity: 75.9 %,Root VWC: 25 %,..."
@@ -211,17 +273,29 @@ async def _hardware_listener() -> None:
     while True:
         port = None
         try:
+            # Auto-detect the best available serial port each attempt
+            active_port = _auto_detect_port()
+            if not active_port:
+                logger.warning(
+                    "hardware_no_port_found",
+                    note="No USB serial port detected. Plug in your Arduino and wait.",
+                    reconnect_in=reconnect_interval,
+                )
+                await asyncio.sleep(reconnect_interval)
+                reconnect_interval = min(reconnect_interval * 2, 60)
+                continue
+
             logger.info(
                 "hardware_connecting",
-                port=settings.hardware_serial_port,
+                port=active_port,
                 baud=settings.hardware_baud_rate,
             )
             port = serial.Serial(
-                settings.hardware_serial_port,
+                active_port,
                 baudrate=settings.hardware_baud_rate,
                 timeout=settings.hardware_read_timeout_s,
             )
-            logger.info("hardware_connected", port=settings.hardware_serial_port)
+            logger.info("hardware_connected", port=active_port)
             reconnect_interval = 5  # reset backoff on successful connect
 
             while True:
@@ -265,6 +339,7 @@ async def _hardware_listener() -> None:
                                 pest_vibe=parsed.get("vibration_raw") or parsed.get("pest_vibe"),
                                 soil_gas_raw=parsed.get("soil_gas"),
                                 irradiance_w_m2=parsed.get("irradiance"),
+                                leaf_wetness=parsed.get("leaf_wetness_pct") or parsed.get("leaf_wetness"),
                                 pump_status=parsed.get("pump_status"),
                                 sequence=sequence,
                             )
@@ -300,6 +375,7 @@ async def _hardware_listener() -> None:
                             pest_vibe=_i("pest vibe"),
                             soil_gas_raw=_f("soil gas"),
                             irradiance_w_m2=_f("irradiance"),
+                            leaf_wetness=_f("leaf wetness"),
                             pump_status=fields.get("pump status"),
                             sequence=sequence,
                         )

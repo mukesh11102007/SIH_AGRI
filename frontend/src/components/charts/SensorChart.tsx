@@ -32,7 +32,7 @@ function CustomTooltip({ active, payload, label, unit }: any) {
       fontSize: 'var(--text-xs)',
     }}>
       <div style={{ color: 'var(--color-text-muted)', marginBottom: 2 }}>
-        {label ? format(parseISO(label), 'MMM d, HH:mm') : ''}
+        {payload[0]?.payload?.t ? format(parseISO(payload[0].payload.t), 'MMM d, HH:mm') : label}
       </div>
       <div style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
         {payload[0].value?.toFixed(1)} {unit ?? ''}

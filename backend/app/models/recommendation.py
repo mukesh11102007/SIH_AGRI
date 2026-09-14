@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Recommendation ORM model — irrigation and condition recommendations with full reasoning."""
 import uuid
 from datetime import datetime

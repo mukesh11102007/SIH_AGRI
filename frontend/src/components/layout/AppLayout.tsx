@@ -20,7 +20,7 @@ interface LayoutProps {
   farmName?: string;
 }
 
-export function AppLayout({ dataSource = 'simulator', farmName = 'Demo Farm' }: LayoutProps) {
+export function AppLayout({ dataSource = 'simulator', farmName = '' }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isSimulation = dataSource === 'simulator' || dataSource === 'no_data';
 
@@ -39,18 +39,18 @@ export function AppLayout({ dataSource = 'simulator', farmName = 'Demo Farm' }: 
         top: 0,
         zIndex: 100,
       }}>
-        {/* Logo */}
+        {/* Brand logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }}>
-          <span style={{ fontWeight: 'var(--font-bold)', fontSize: 'var(--text-base)', color: 'var(--color-brand)', letterSpacing: '-0.01em' }}>
-            SmartFarm
-          </span>
+          <span style={{ fontSize: '1.2rem' }}>🌿</span>
+          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+            <span style={{ fontWeight: 'var(--font-bold)', fontSize: 'var(--text-base)', color: 'var(--color-brand)', letterSpacing: '-0.01em' }}>
+              AGOR
+            </span>
+            <span style={{ fontSize: '9px', color: 'var(--color-text-muted)', letterSpacing: '0.04em', fontWeight: 500 }}>
+              AI-GUIDED SMART FARMING
+            </span>
+          </div>
         </div>
-
-        <div style={{ height: 20, width: 1, background: 'var(--color-border)', margin: '0 var(--space-2)' }} />
-
-        <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)', flex: 1 }}>
-          {farmName}
-        </span>
 
 
 

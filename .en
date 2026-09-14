@@ -1,0 +1,63 @@
+# ============================================================
+# Smart Farming Platform — Environment Configuration
+# Copy this file to .env and fill in values before running.
+# Never commit .env to version control.
+# ============================================================
+
+# --- PostgreSQL ---
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_DB=smartfarm
+POSTGRES_USER=farmuser
+POSTGRES_PASSWORD=changeme_strong_password
+
+# --- MQTT Broker ---
+MQTT_HOST=mosquitto
+MQTT_PORT=1883
+MQTT_USERNAME=farmdevice
+MQTT_PASSWORD=changeme_mqtt_password
+MQTT_CLIENT_ID=backend-ingest-01
+
+# --- Backend ---
+BACKEND_HOST=0.0.0.0
+BACKEND_PORT=8000
+LOG_LEVEL=INFO
+CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:80
+
+# --- App ---
+APP_ENV=development
+SECRET_KEY=changeme_at_least_32_char_secret_key_here
+
+# --- Simulator ---
+SIMULATOR_FARM_ID=farm-001
+SIMULATOR_FIELD_ID=field-north-01
+SIMULATOR_DEVICE_ID=sim-esp32-01
+SIMULATOR_INTERVAL_SECONDS=10
+SIMULATOR_SCENARIO=NORMAL
+
+# ============================================================
+# Hardware (HC-05 Bluetooth) — disabled by default
+# ============================================================
+# Set HARDWARE_ENABLED=true ONLY when the HC-05 is physically
+# paired, connected, and you are ready to receive real sensor data.
+#
+# Leaving this false (the default) means the application starts
+# normally using the simulator — no Bluetooth hardware required.
+HARDWARE_ENABLED=false
+
+# Device identity — how the HC-05 appears in the database.
+HARDWARE_DEVICE_ID=hc05-device-01
+
+# Which farm/field receives HC-05 readings.
+# Must match existing seeded values (or create manually first).
+HARDWARE_FARM_ID=farm-001
+HARDWARE_FIELD_ID=field-north-01
+
+# Serial/Bluetooth port — set at runtime, DO NOT hard-code here.
+# Windows example: HARDWARE_SERIAL_PORT=COM7
+# Linux example:   HARDWARE_SERIAL_PORT=/dev/rfcomm0
+HARDWARE_SERIAL_PORT=
+
+# Serial parameters — must match HC-05 firmware AT configuration.
+HARDWARE_BAUD_RATE=9600
+HARDWARE_READ_TIMEOUT_S=2.0

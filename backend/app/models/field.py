@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Field ORM model — a managed area within a farm with a specific crop."""
 import uuid
 from datetime import datetime

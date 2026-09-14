@@ -103,6 +103,8 @@ class FieldConditionSummary(BaseModel):
     soil_temperature_c: float | None
     light_lux: float | None
     leaf_wetness_pct: float | None
+    vibration_raw: int | None
+    soil_gas_raw: float | None
     water_level_available: bool | None
 
     # Conditions

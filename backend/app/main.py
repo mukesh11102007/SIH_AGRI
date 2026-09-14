@@ -242,7 +242,7 @@ async def _seed_default_data() -> None:
 
         farm = Farm(
             id=farm_id,
-            name="Demo Farm",
+            name="AGOR Farm",
             location="Tamil Nadu, India",
             timezone="Asia/Kolkata",
         )

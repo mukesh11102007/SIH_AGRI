@@ -97,6 +97,8 @@ export interface FieldConditionSummary {
   soil_temperature_c: number | null;
   light_lux: number | null;
   leaf_wetness_pct: number | null;
+  vibration_raw: number | null;
+  soil_gas_raw: number | null;
   water_level_available: boolean | null;
 
   // Conditions

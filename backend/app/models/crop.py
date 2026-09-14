@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Crop ORM model — stores crop-specific thresholds used by the decision engine."""
 import uuid
 from datetime import datetime

@@ -27,7 +27,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<AppLayout farmName="Demo Farm" dataSource="simulator" />}>
+          <Route path="/" element={<AppLayout dataSource="simulator" />}>
             <Route index element={<Dashboard />} />
             <Route path="monitor" element={<LiveMonitor />} />
             <Route path="irrigation" element={<Irrigation />} />
