@@ -173,6 +173,7 @@ async def analyze_field(
             activity_signal="normal",
             active_alert_count=0,
             device_status=device_status,
+            ai_advice="No sensor data available yet to generate advice."
         )
 
     r = latest_reading
@@ -219,6 +220,27 @@ async def analyze_field(
     water_avail_result = _water_avail.analyze(r.water_level_available)
     activity_result = _activity.analyze(r.vibration_raw, r.light_lux)
 
+    # ── Simple Rule-based Advice ─────────────────────────────
+    ai_advice = None
+    if crop_thresholds and r.air_temperature_c is not None and r.soil_moisture_pct is not None:
+        advice_parts = []
+        if r.air_temperature_c > crop_thresholds.optimal_temp_max_c:
+            advice_parts.append(f"Temperature is high ({r.air_temperature_c}°C). Consider providing shade or misting.")
+        elif r.air_temperature_c < 15.0:
+            advice_parts.append(f"Temperature is low ({r.air_temperature_c}°C).")
+        
+        if r.soil_moisture_pct < crop_thresholds.optimal_moisture_min_pct:
+            advice_parts.append(f"Soil is dry ({r.soil_moisture_pct}%). Immediate irrigation recommended.")
+        elif r.soil_moisture_pct > crop_thresholds.optimal_moisture_max_pct:
+            advice_parts.append(f"Soil is overly wet ({r.soil_moisture_pct}%). Avoid irrigation.")
+            
+        if advice_parts:
+            ai_advice = " ".join(advice_parts)
+        else:
+            ai_advice = f"Your {crop_name.replace('_', ' ') if crop_name else 'crop'} is in excellent condition! Sensor readings are within the optimal range."
+    else:
+        ai_advice = "Waiting for complete sensor data to generate advice."
+
     # ── Water availability label ─────────────────────────────
     if r.water_level_available is True:
         water_availability = "available"
@@ -260,4 +282,5 @@ async def analyze_field(
         activity_signal="elevated" if activity_result.severity != Severity.NONE else "normal",
         active_alert_count=active_alert_count,
         device_status=device_status,
+        ai_advice=ai_advice,
     )

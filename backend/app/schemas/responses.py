@@ -124,6 +124,9 @@ class FieldConditionSummary(BaseModel):
     # Device status
     device_status: str            # live|stale|offline|never_seen
 
+    # Simple Rule-based Advice
+    ai_advice: str | None = None
+
 
 class WebSocketMessage(BaseModel):
     """Structure of messages pushed over WebSocket to the frontend."""

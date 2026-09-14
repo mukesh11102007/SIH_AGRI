@@ -45,7 +45,7 @@ class TelemetryPayload(BaseModel):
     """
     device_id: str = Field(..., min_length=1, max_length=128)
     farm_id: str = Field(..., min_length=1, max_length=64)
-    field_id: str = Field(..., min_length=1, max_length=64)
+    field_id: str = Field(default="zone-1", min_length=1, max_length=64)
     firmware_version: str | None = None
     timestamp_utc: datetime
     # "hc05" is reserved for future HC-05 Bluetooth hardware integration.
