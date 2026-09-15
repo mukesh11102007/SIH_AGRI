@@ -72,6 +72,8 @@ export default function Dashboard() {
   if (error) return <ErrorState message="Unable to load farm data. Check backend connection." />;
   if (!summary) return null;
 
+  const isOffline = summary.device_status === 'offline' || summary.device_status === 'never_seen';
+
   const irrigationSeverity = summary.irrigation_status === 'IRRIGATION_RECOMMENDED' ? 'critical'
     : summary.irrigation_status === 'IRRIGATION_BLOCKED' ? 'high'
     : summary.irrigation_status === 'MONITOR' ? 'medium'
@@ -122,6 +124,26 @@ export default function Dashboard() {
         onActiveZoneChange={setActiveZoneId} 
       />
 
+      {/* ── Device Offline Banner ────────────────────────────── */}
+      {isOffline && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+          background: 'rgba(220, 38, 38, 0.1)', border: '1px solid rgba(220, 38, 38, 0.4)',
+          borderRadius: 'var(--radius-md)', padding: 'var(--space-4)',
+          animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        }}>
+          <span style={{ fontSize: '1.5rem' }}>📡</span>
+          <div>
+            <div style={{ fontWeight: 700, color: 'var(--color-status-critical)', fontSize: 'var(--text-md)', marginBottom: 2 }}>
+              Device Offline — No Live Data
+            </div>
+            <div style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)' }}>
+              The sensor device (hc05-device-01) is not sending readings. Plug in your Arduino via USB and restart the backend, or check the serial connection.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Critical alerts banner ───────────────────────────── */}
       {alerts && alerts.filter(a => a.severity === 'critical').map(alert => (
         <div key={alert.id} className="alert-banner alert-banner-critical">
@@ -142,28 +164,28 @@ export default function Dashboard() {
       ))}
 
       {/* ── Key metrics Grid ────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)', opacity: isOffline ? 0.45 : 1, pointerEvents: isOffline ? 'none' : 'auto' }}>
         <MetricTile
           label="Soil Moisture"
-          value={summary.soil_moisture_pct?.toFixed(1) ?? null}
+          value={isOffline ? null : (summary.soil_moisture_pct?.toFixed(1) ?? null)}
           unit="%"
           color={summary.water_stress_level !== 'none' ? 'var(--color-status-warning)' : 'var(--color-brand)'}
         />
         <MetricTile
           label="Air Temperature"
-          value={summary.air_temperature_c?.toFixed(1) ?? null}
+          value={isOffline ? null : (summary.air_temperature_c?.toFixed(1) ?? null)}
           unit="°C"
           color={summary.heat_stress_level !== 'none' ? 'var(--color-status-warning)' : 'var(--color-text-primary)'}
         />
         <MetricTile
           label="Air Humidity"
-          value={summary.air_humidity_pct?.toFixed(0) ?? null}
+          value={isOffline ? null : (summary.air_humidity_pct?.toFixed(0) ?? null)}
           unit="%"
         />
         <MetricTile
           label="Water Source"
-          value={summary.water_availability === 'available' ? 'OK' : 'Check'}
-          color={summary.water_availability !== 'available' ? 'var(--color-status-critical)' : 'var(--color-status-normal)'}
+          value={isOffline ? '—' : (summary.water_availability === 'available' ? 'OK' : 'Check')}
+          color={isOffline ? 'var(--color-text-muted)' : (summary.water_availability !== 'available' ? 'var(--color-status-critical)' : 'var(--color-status-normal)')}
         />
       </div>
 
@@ -207,24 +229,33 @@ export default function Dashboard() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
           
           {/* Detailed Readings */}
-          <div className="card">
-            <h2 style={{ fontSize: 'var(--text-md)', fontWeight: 'var(--font-semibold)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div className="card" style={{ opacity: isOffline ? 0.45 : 1 }}>
+            <h2 style={{ fontSize: 'var(--text-md)', fontWeight: 'var(--font-semibold)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-4)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
               Detailed Readings
+              {isOffline && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-status-critical)', fontWeight: 600, background: 'rgba(220,38,38,0.1)', borderRadius: 4, padding: '2px 6px' }}>OFFLINE</span>}
             </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-              <SensorValue label="Soil Temperature" value={summary.soil_temperature_c} unit="°C" />
-              <div className="divider" style={{ margin: 'var(--space-1) 0' }} />
-              <SensorValue label="Light Intensity" value={summary.light_lux} unit="lux" decimals={0} />
-              <div className="divider" style={{ margin: 'var(--space-1) 0' }} />
-              <SensorValue label="Leaf Wetness" value={summary.leaf_wetness_pct} unit="%" />
-              <div className="divider" style={{ margin: 'var(--space-1) 0' }} />
-              <SensorValue label="Pest / Vibration" value={summary.vibration_raw} unit="units" />
-              <div className="divider" style={{ margin: 'var(--space-1) 0' }} />
-              <SensorValue label="Soil Gas (VOC)" value={summary.soil_gas_raw} unit="ppm" />
-            </div>
-            {summary.last_updated && (
+            {isOffline ? (
+              <div style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
+                <div style={{ fontSize: '2rem', marginBottom: 'var(--space-2)' }}>📡</div>
+                No live readings — device is offline.
+                <div style={{ fontSize: 'var(--text-xs)', marginTop: 'var(--space-1)' }}>Connect your Arduino via USB to see real-time data.</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                <SensorValue label="Soil Temperature" value={summary.soil_temperature_c} unit="°C" />
+                <div className="divider" style={{ margin: 'var(--space-1) 0' }} />
+                <SensorValue label="Light Intensity" value={summary.light_lux} unit="lux" decimals={0} />
+                <div className="divider" style={{ margin: 'var(--space-1) 0' }} />
+                <SensorValue label="Leaf Wetness" value={summary.leaf_wetness_pct} unit="%" />
+                <div className="divider" style={{ margin: 'var(--space-1) 0' }} />
+                <SensorValue label="Pest / Vibration" value={summary.vibration_raw} unit="units" />
+                <div className="divider" style={{ margin: 'var(--space-1) 0' }} />
+                <SensorValue label="Soil Gas (VOC)" value={summary.soil_gas_raw} unit="ppm" />
+              </div>
+            )}
+            {summary.last_updated && !isOffline && (
               <div style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)', marginTop: 'var(--space-4)' }}>
-                Data source: {summary.data_source}
+                Data source: {summary.data_source} · HC-05 Arduino
               </div>
             )}
           </div>

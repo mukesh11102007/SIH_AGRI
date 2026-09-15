@@ -10,11 +10,14 @@ import { StatusBadge, StatusDot } from '../components/ui/StatusBadge';
 import type { Device } from '../types';
 
 export default function Devices() {
-  const { data: devices, isLoading } = useQuery<Device[]>({
+  const { data: rawDevices, isLoading } = useQuery<Device[]>({
     queryKey: ['devices'],
     queryFn: () => api.devices.list(),
     refetchInterval: 10000,
   });
+
+  // Hide simulator devices — only show real hardware
+  const devices = rawDevices?.filter(d => d.source_type !== 'simulator');
 
   const liveCount = devices?.filter(d => d.connectivity_status === 'live').length ?? 0;
   const offlineCount = devices?.filter(d => d.connectivity_status === 'offline').length ?? 0;
@@ -66,13 +69,13 @@ export default function Devices() {
         </div>
       )}
 
-      {/* ESP32 integration note */}
+      {/* HC-05 integration note */}
       <div className="card" style={{ borderColor: 'var(--color-status-info-border)', background: 'var(--color-status-info-bg)' }}>
         <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--color-status-info)', marginBottom: 'var(--space-2)' }}>
-          Hardware Integration
+          🔌 Hardware Integration — HC-05 Arduino
         </div>
         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-          To connect a real ESP32, publish telemetry to the MQTT topic:
+          Connect your Arduino board via USB. The backend auto-detects the port and starts reading sensor data immediately.
         </p>
         <code style={{
           display: 'block', marginTop: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)',
@@ -80,11 +83,11 @@ export default function Devices() {
           fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'var(--color-brand)',
           wordBreak: 'break-all',
         }}>
-          farm/farm-001/field/field-north-01/device/YOUR_DEVICE_ID/telemetry
+          /dev/cu.usbmodem14101  (auto-detected)
         </code>
         <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 'var(--space-2)' }}>
-          Set <code>"source": "esp32"</code> in the payload. The device will appear here automatically.
-          No backend changes required.
+          Set <code>HARDWARE_ENABLED=true</code> and <code>HARDWARE_SERIAL_PORT=/dev/cu.usbmodem14101</code> in your <code>.env</code> file.
+          The device registers automatically when it sends its first reading.
         </p>
       </div>
     </div>
@@ -104,11 +107,11 @@ function DeviceCard({ device }: { device: Device }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
           <StatusDot status={device.connectivity_status} />
           <div>
-            <div style={{ fontWeight: 'var(--font-semibold)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)' }}>
-              {device.device_identifier}
+            <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-sm)' }}>
+              {device.source_type === 'hc05' ? 'HC-05 Arduino Sensor' : device.device_identifier}
             </div>
             <div style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)', marginTop: 2 }}>
-              Source: {device.source_type}
+              {device.source_type === 'hc05' ? 'USB Serial — HC-05' : `Source: ${device.source_type}`}
               {device.firmware_version ? ` · v${device.firmware_version}` : ''}
             </div>
           </div>
