@@ -9,7 +9,9 @@
 SmartFarm converts raw IoT sensor data into clear, actionable farming decisions.
 Instead of displaying numbers, the system tells farmers: **whether to irrigate, where stress is occurring, and what action to take**.
 
-The system is **hardware-agnostic by design** — it operates identically with the built-in simulator and real ESP32 hardware.
+The system is **hardware-agnostic by design** — it operates identically with the built-in simulator and real ESP32/HC-05 hardware.
+
+> 📚 **Student / Academic Use:** Preparing for a presentation or viva? Read the [Comprehensive Technical Analysis](TECHNICAL_ANALYSIS.md) for a deep dive into the system's architecture, ML integration, and real-world implementation details.
 
 ---
 
